@@ -1,8 +1,8 @@
-import './configs';
+import './configs/dotenv';
 import app from './ExpressApp';
-import { configs } from './configs';
+import { dotenvConfigs } from './configs/dotenv';
 
-const port = configs.port;
+const port = dotenvConfigs.port;
 
 const handleListen = () => {
     console.log(`Listening On : http://localhost:${port}`);

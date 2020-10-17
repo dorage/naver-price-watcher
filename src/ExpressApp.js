@@ -6,7 +6,7 @@ import swaggerUI from 'swagger-ui-express';
 
 import './db';
 import mainRouter from './routers/mainRouter';
-import { configs } from './configs';
+import { dotenvConfigs } from './configs/dotenv';
 import morgan from 'morgan';
 import { swaggerSpec } from './configs/swagger';
 
@@ -17,7 +17,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(
     session({
-        secret: configs.cookieSecret,
+        secret: dotenvConfigs.cookieSecret,
         resave: true,
         saveUninitialized: false,
     }),

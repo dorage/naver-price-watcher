@@ -1,14 +1,14 @@
 import mongoose from 'mongoose';
-import { configs } from './configs';
+import { dotenvConfigs } from './configs/dotenv';
 
-mongoose.connect(configs.mongoUrl, {
+mongoose.connect(dotenvConfigs.mongoUrl, {
     useNewUrlParser: true,
     useFindAndModify: false,
     useUnifiedTopology: true,
 });
 
 const db = mongoose.connection;
-const url = configs.mongoUrl;
+const url = dotenvConfigs.mongoUrl;
 
 const handleError = (error) => console.log(`error: ${error}`);
 const handleOpen = () => console.log(`DB Connected on ${url}`);

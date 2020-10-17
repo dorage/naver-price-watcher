@@ -1,9 +1,8 @@
-# EXPRESS BOILERPLATE ON VSCODE
+# EXPRESS naverPriceWatcher ON VSCODE
 
 ## Install
 
-    $ git clone https://github.com/dorage/nodeboilerplate.git
-    $ cd nodeboilerplate
+    $ cd nodenaverPriceWatcher
     $ npm install
 
 ## Configure app
