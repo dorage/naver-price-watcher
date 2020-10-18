@@ -4,7 +4,7 @@
 import mongoose from 'mongoose';
 
 const schema = new mongoose.Schema({
-    store_name: String,
+    name: String,
     vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor' },
 });
 

@@ -6,9 +6,15 @@ import swaggerUI from 'swagger-ui-express';
 
 import './db';
 import mainRouter from './routers/mainRouter';
+import './configs/crawler';
 import { dotenvConfigs } from './configs/dotenv';
-import morgan from 'morgan';
 import { swaggerSpec } from './configs/swagger';
+import morgan from 'morgan';
+import {
+    initializeProduct,
+    initializeSellers,
+    initializeVendors,
+} from './middlewares/initializeMiddleware';
 
 const app = express();
 
@@ -23,6 +29,11 @@ app.use(
     }),
 );
 app.use(morgan('dev'));
+
+/// initialize Models // TODO; API로 등록하게 옮기기
+initializeVendors();
+initializeSellers();
+initializeProduct();
 
 app.use(mainRouter);
 app.use(

@@ -9,10 +9,9 @@
 import mongoose from 'mongoose';
 
 const schema = new mongoose.Schema({
-    image_url: String,
     product_url: String,
     title: String,
-    quantitiy: Number,
+    unit_sales: Number,
     sales_price: Number,
     signed_in: { type: Date, default: Date.now },
     seller: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
