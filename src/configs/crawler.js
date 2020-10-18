@@ -1,5 +1,16 @@
 import puppeteer from 'puppeteer';
 
+const pages = [
+    // krm-65
+    'https://search.shopping.naver.com/detail/detail.nhn?nvMid=20793817845&query=%EA%B7%80%EB%9A%9C%EB%9D%BC%EB%AF%B8%20%EC%98%A8%EC%88%98%EB%A7%A4%ED%8A%B8&NaPm=ct%3Dkgfb08pk%7Cci%3D22b7f5bec76c03ea6b8bdc78878d643c2dc480a8%7Ctr%3Dslsl%7Csn%3D95694%7Chk%3Dd8b0149fb7ef7b90860b58fc5fcced02d76fffea',
+    // krm-63
+    'https://search.shopping.naver.com/detail/detail.nhn?nvMid=20794585904&query=%EA%B7%80%EB%9A%9C%EB%9D%BC%EB%AF%B8%20%EC%98%A8%EC%88%98%EB%A7%A4%ED%8A%B8&NaPm=ct%3Dkgfb09hc%7Cci%3D510c5875fdb6e19eee0ae33536433ae01922d757%7Ctr%3Dslsl%7Csn%3D95694%7Chk%3D9ede74e27bfeeebc70abba37ec656178c06fbec2',
+    // em-87
+    'https://search.shopping.naver.com/detail/detail.nhn?nvMid=20794885913&query=em-87&NaPm=ct%3Dkgfb3dd4%7Cci%3Db684ef33b6b8a4339ca1ca4625362ac69516fc1b%7Ctr%3Dslsl%7Csn%3D95694%7Chk%3D7b4687fc52801d7764c6b948cf80f7b2101d5c95',
+    // em-321
+    'https://search.shopping.naver.com/detail/detail.nhn?nvMid=15321359098&query=%EA%B7%80%EB%9A%9C%EB%9D%BC%EB%AF%B8%20%EC%98%A8%EC%88%98%EB%A7%A4%ED%8A%B8&NaPm=ct%3Dkgfb0iqo%7Cci%3D9601a294253a72cd0c01b84d8f89b05cad2cd844%7Ctr%3Dslsl%7Csn%3D95694%7Chk%3D00c8c261e9b2171afe47dd2783fd63bd1233aa9d',
+];
+
 (async () => {
     const browser = await puppeteer.launch({ headless: false });
     const page = await browser.newPage();
@@ -10,23 +21,24 @@ import puppeteer from 'puppeteer';
         width: 1920,
         height: 1080,
     });
-    // 모델 페이지
-    /*
-    for (const term of checkList) {
-        await page.goto(url.replace('TERM', encodeURI(term.title)));
-        await autoScroll(page);
+    // 모델 페이지 크롤링
+    const checkList = await crawlModelPage(page);
+    // 상품 페이지 크롤링
+    for (var object of checkList) {
+        console.log(object.title);
+        await crawlProductPage(page, object.title);
     }
-    */
 })();
 
 /// 모델 페이지를 크롤링합니다.
+/// { storeName, title } 을 반환합니다.
 async function crawlModelPage(page) {
     await page.waitForSelector('.mall_type._mall_nm');
     // 페이지 개수 세기
-    const pages = await getPagination(page, '#_price_list_paging');
+    const pagination = await getPagination(page, '#_price_list_paging');
     const checkList = [];
     // pagination & crawl
-    for (var pageNum = 0; pageNum < pages; pageNum++) {
+    for (var pageNum = 0; pageNum < pagination; pageNum++) {
         // 페이지 이동
         if (pageNum != 0) {
             await page.evaluate((pageNum) => {
@@ -43,7 +55,7 @@ async function crawlModelPage(page) {
             const elements = Array.from(
                 document.querySelectorAll('._itemSection'),
             );
-            const malls = elements.map((element, index) => {
+            const models = elements.map((element, index) => {
                 const storeName = element.querySelector('.mall_type._mall_nm');
                 const title = element.querySelector('.goods_tit');
                 if (!storeName) {
@@ -54,27 +66,45 @@ async function crawlModelPage(page) {
                     title: title.textContent.replace('\n', '').trim(),
                 };
             });
-            return malls;
+            return models;
         });
         const validContents = contents.filter((elem) => elem != null);
         checkList.push(...validContents);
     }
+    return checkList;
 }
 
+const changePage = (pageNum) => {
+    // 네이버 script
+    shop.detail.PriceHandler.page(pageNum + 1, '_price_list_paging');
+};
+
+const getContent = (el) => {
+    const elements = Array.from(document.querySelectorAll('._itemSection'));
+    const models = elements.map((element, index) => {
+        const storeName = element.querySelector('.mall_type._mall_nm');
+        const title = element.querySelector('.goods_tit');
+        if (!storeName) {
+            return null;
+        }
+        return {
+            storeName: storeName.textContent,
+            title: title.textContent.replace('\n', '').trim(),
+        };
+    });
+    return models;
+};
+
 /// 상품들을 크롤링합니다.
-async function crawlProductPage(page) {
+async function crawlProductPage(page, term) {
     const url =
         'https://search.shopping.naver.com/search/all?frm=NVSHCHK&pagingIndex=1&pagingSize=80&productSet=checkout&query=TERM&sort=rel&timestamp=&viewType=list';
     const testUrl =
         'https://search.shopping.naver.com/search/all?query=(%EC%A3%BC)Moashop%20%EA%B7%80%EB%9A%9C%EB%9D%BC%EB%AF%B8%20%EC%98%A8%EC%88%98%EB%A7%A4%ED%8A%B8%20KRM-651%20%EC%8A%AC%EB%A6%BC%EC%8B%B1%EA%B8%80&frm=NVSHATC&prevQuery=%EA%B7%80%EB%9A%9C%EB%9D%BC%EB%AF%B8%20%EC%98%A8%EC%88%98%EB%A7%A4%ED%8A%B8';
     const checkList = [];
-    //await page.goto(url.replace('TERM', encodeURI(checkList[0].title)));
-    await page.goto(testUrl);
-    const pageNumOfProducts = await getPagination(
-        page,
-        '.pagination_num__-IkyP',
-    );
-    for (var pageNum = 0; pageNum < pageNumOfProducts; pageNum++) {
+    await page.goto(url.replace('TERM', encodeURI(term)));
+    const pagination = await getPagination(page, '.pagination_num__-IkyP');
+    for (var pageNum = 0; pageNum < pagination; pageNum++) {
         // 스크롤링
         await autoScroll(page);
         // 페이지 크롤링
@@ -122,13 +152,11 @@ async function crawlProductPage(page) {
                     product_url: productUrlElement.href,
                 };
             });
-            console.log(products);
             return products;
         });
         const validContents = contents.filter((elem) => elem != null);
         checkList.push(...validContents);
-        console.log(checkList);
-        if (pageNum + 1 == pageNumOfProducts) {
+        if (pageNum + 1 == pagination) {
             break;
         }
         // 페이지 이동
@@ -138,6 +166,7 @@ async function crawlProductPage(page) {
             );
             paginations[pageNum + 1].click();
         }, pageNum);
+        // 딜레이
         await page.waitForTimeout(1000);
     }
 }
