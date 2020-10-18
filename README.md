@@ -1,5 +1,8 @@
 # EXPRESS naverPriceWatcher ON VSCODE
 
+네이버 쇼핑을 크롤링하는 서버입니다.
+모델 페이지와 상품페이지로 나누어 작업을 하게 되어있습니다.
+
 ## Install
 
     $ cd nodenaverPriceWatcher
