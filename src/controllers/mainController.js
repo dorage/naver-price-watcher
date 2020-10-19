@@ -1,19 +1,33 @@
 import puppeteer from 'puppeteer';
+import Sequence from '../models/Sequence';
+import Product from '../models/Product';
+import Seller from '../models/Seller';
 
 export const getHome = (req, res) => {
-    (async () => {
-        const browser = await puppeteer.launch();
-        const page = await browser.newPage();
-        await page.goto(
-            'https://search.shopping.naver.com/detail/detail.nhn?nvMid=20793817845&query=%EA%B7%80%EB%9A%9C%EB%9D%BC%EB%AF%B8%20%EC%98%A8%EC%88%98%EB%A7%A4%ED%8A%B8&NaPm=ct%3Dkgc9zx8w%7Cci%3D164563fc46b063c973ad079319e4ccfe1cfcc999%7Ctr%3Dslsl%7Csn%3D95694%7Chk%3D230205d6c27dd2fcf0ab38637b0ecf96fb5aec91',
-            {
-                waitUntil: 'networkidle2',
-            },
+    res.send('Welcome! naver-price-watcher!');
+};
+
+export const getLatest = async (req, res) => {
+    const lastSequence = await Sequence.findOne({ processing: false }).sort({
+        _id: -1,
+    });
+    if (lastSequence == null) res.send('processing...');
+    const sellers = await Seller.find({}, { __v: 0 });
+    const response = [];
+    for (var seller of sellers) {
+        const products = await Product.find(
+            { sequence: lastSequence, seller },
+            { _id: 0, sequence: 0, seller: 0, product_model: 0, __v: 0 },
         );
-        await page.pdf({ path: 'search.pdf', format: 'A4' });
-
-        await browser.close();
-    })();
-
-    res.send('done!');
+        let unit_sales = 0;
+        if (products.length) {
+            for (var product of products) unit_sales += product.unit_sales;
+        }
+        response.push({
+            seller: seller.name,
+            unit_sales: unit_sales,
+            products: products,
+        });
+    }
+    res.send(response);
 };

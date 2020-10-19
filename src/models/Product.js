@@ -9,13 +9,16 @@
 import mongoose from 'mongoose';
 
 const schema = new mongoose.Schema({
-    product_url: String,
+    url: String,
     title: String,
     unit_sales: Number,
     sales_price: Number,
-    signed_in: { type: Date, default: Date.now },
-    seller: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    product_model: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    sequence: { type: mongoose.Schema.Types.ObjectId, ref: 'Sequence' },
+    seller: { type: mongoose.Schema.Types.ObjectId, ref: 'Seller' },
+    product_model: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'ProductModel',
+    },
 });
 
 const model = mongoose.model('Product', schema);

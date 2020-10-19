@@ -31,8 +31,8 @@ app.use(
 app.use(morgan('dev'));
 
 /// initialize Models // TODO; API로 등록하게 옮기기
-initializeVendors();
-initializeSellers();
+//initializeVendors();
+//initializeSellers();
 initializeProduct();
 
 app.use(mainRouter);
