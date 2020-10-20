@@ -15,7 +15,7 @@ export async function crawlModelPage(page) {
         // contents 모으기
         const contents = await page.evaluate(getContents);
         contents.forEach((elem) => { 
-            if (elem == null && crawledData.includes(elem)) return;
+            if (elem === null || crawledData.includes(elem)) return;
             crawledData.push(elem);
         });
     }
@@ -31,7 +31,7 @@ const navgiateToNextPage = (pageNum) => {
 const getContents = (el) => {
     const elements = Array.from(document.querySelectorAll('._itemSection'));
     const titles = elements.map((element, index) => {
-        //const storeName = element.querySelector('.mall_type._mall_nm');
+        const storeName = element.querySelector('.mall_type._mall_nm');
         const title = element.querySelector('.goods_tit');
         if (!storeName) {
             return null;

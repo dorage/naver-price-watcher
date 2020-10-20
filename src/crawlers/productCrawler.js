@@ -5,7 +5,7 @@ import { getPagination } from './common';
 const baseUrl = 'https://search.shopping.naver.com/search/all?frm=NVSHCHK&pagingIndex=1&pagingSize=80&productSet=checkout&query=TERM&sort=rel&timestamp=&viewType=list';
 
 /// 상품들을 크롤링합니다.
-export async function crawlProductPage (page, term, sequence, checkedUrls, checkDuplication) {
+export async function crawlProductPage (page, term, sequence, checkDuplication) {
     const contentsList = [];
     await page.goto(baseUrl.replace('TERM', encodeURI(term)));
     const pageCount = await getPagination(page, '.pagination_num__-IkyP');
@@ -14,9 +14,23 @@ export async function crawlProductPage (page, term, sequence, checkedUrls, check
         // 스크롤링
         await autoScroll(page);
         // contents 모으기
-        const contents = await page.evaluate(getContents, checkedUrls, checkDuplication);
-        const validContents = contents.filter((elem) => elem != null);
-        contentsList.push(...validContents);
+        const contents = await page.evaluate(getContents);
+        contents.forEach((elem) => {
+            if (elem === null) return;
+            const { storeName, title } = elem;
+            // 중복 체크로 체크하기
+            const compressedTitle = title.replace(/ /g, 'i');
+            if (Object.keys(checkDuplication).includes(storeName)) {
+                if (checkDuplication[storeName].includes(compressedTitle)) {
+                    return;
+                }
+                checkDuplication[storeName].push(compressedTitle);
+            }
+            if (checkDuplication[storeName] === undefined) {
+                checkDuplication[storeName] = [compressedTitle];
+            }
+            contentsList.push(elem);
+        });
         // 마지막 페이지 탈출
         if (pageIndex + 1 == pageCount) {
             break;
@@ -64,22 +78,22 @@ const navgiateToNextPage = (pageNum) => {
 
 /// 상품 정보를 수집합니다.
 /// {storeName, title, sales_price, unit_sales, url }
-const getContents = (checkedUrls, checkDuplication) => {
+const getContents = () => {
     const elements = Array.from(
         document.querySelectorAll('.basicList_item__2XT81'),
     );
     const products = elements.map((element, index) => {
-        // storename 이 없으면 기타 쇼핑몰이면 패스
+        // storename 이 없으면 기타 쇼핑몰 / 패스
         const storeNameElement = element.querySelector(
             '.basicList_mall__sbVax',
         );
-        if (storeNameElement.textContent == '') return null;
+        if (storeNameElement.textContent == '') return null; 
+        const storeName = storeNameElement.textContent;
         // url이 이미 스크래핑한 url이면 패스
         const productUrlElement = element.querySelector(
             '.basicList_link__1MaTN',
         );
-        if (checkedUrls.includes(productUrlElement.textContent)) return null;
-        checkedUrls.push(productUrlElement.textContent);
+        const url = productUrlElement.href;
         // title에 귀뚜라미 온수매트 관련이 없으면 패스
         const validateTitle = (text) => {
             if (text.replace(' ', '').includes('귀뚜라미')) return true;
@@ -88,31 +102,33 @@ const getContents = (checkedUrls, checkDuplication) => {
         };
         const titleElement = element.querySelector('.basicList_link__1MaTN');
         if (!validateTitle(titleElement.textContent)) return null;
+        const title = titleElement.textContent.replace('\n', '').trim();
         // 수량이 없으면 0으로 해서 넘기기
         const infoGroupElements = Array.from(
             element.getElementsByClassName('basicList_etc__2uAYO'),
         );
-        var sales_unit = 0;
+        var unitSales = 0;
         if (infoGroupElements) {
             const filteredElements = infoGroupElements.filter((elem) =>
                 elem.textContent.includes('구매건수'),
             );
             if (filteredElements.length) {
-                sales_unit = filteredElements[0].children[0].textContent;
+                unitSales = Number(filteredElements[0].children[0].textContent);
             }
         }
         // 기타
         const salesPriceElement = element.querySelector('.price_num__2WUXn');
+        const salesPrice = Number(
+            salesPriceElement.textContent
+                .replace(',', '')
+                .replace('원', ''),
+        );
         return {
-            storeName: storeNameElement.textContent,
-            title: titleElement.textContent.replace('\n', '').trim(),
-            sales_price: Number(
-                salesPriceElement.textContent
-                    .replace(',', '')
-                    .replace('원', ''),
-            ),
-            unit_sales: Number(sales_unit),
-            url: productUrlElement.href,
+            storeName:storeName,
+            title:title,
+            sales_price:salesPrice,
+            unit_sales:unitSales,
+            url:url,
         };
     });
     return products;

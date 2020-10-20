@@ -68,13 +68,13 @@ export const crawl = async () => {
     // 모델페이지 크롤링데이터 별 상품페이지 크롤링
     for (var title of titles) {
         console.log(title);
-        await crawlProductPage(page, title, sequence, checkedUrls, checkDuplication);
+        await crawlProductPage(page, title, sequence, checkDuplication);
     }
     // 
     // 검색어별 상품페이지 크롤링
     for (var term of terms) {
         console.log(term);
-        await crawlProductPage(page, term, sequence, checkedUrls, checkDuplication);
+        await crawlProductPage(page, term, sequence, checkDuplication);
     }
     await Sequence.updateOne({ id: sequence.id }, { processing: false });
     console.log('everyjob is done!');
