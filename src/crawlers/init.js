@@ -1,4 +1,8 @@
+import schedule from 'node-schedule';
 import puppeteer from 'puppeteer';
+import Sequence from '../models/Sequence';
+import { crawlModelPage } from './modelCrawler';
+import { crawlProductPage } from './productCrawler';
 
 const pages = [
     // krm-65
@@ -10,10 +14,45 @@ const pages = [
     // em-321
     'https://search.shopping.naver.com/detail/detail.nhn?nvMid=15321359098&query=%EA%B7%80%EB%9A%9C%EB%9D%BC%EB%AF%B8%20%EC%98%A8%EC%88%98%EB%A7%A4%ED%8A%B8&NaPm=ct%3Dkgfb0iqo%7Cci%3D9601a294253a72cd0c01b84d8f89b05cad2cd844%7Ctr%3Dslsl%7Csn%3D95694%7Chk%3D00c8c261e9b2171afe47dd2783fd63bd1233aa9d',
 ];
+// 검색어
+const terms = [
+    'krm-653',
+    'krm-652',
+    'krm-651',
+    'krm-632',
+    'krm-631',
+    'em-873',
+    'em-871',
+    'em-322',
+    'em-321',
+];
 
-(async () => {
-    const browser = await puppeteer.launch({ headless: false });
+// 새로운 sequence를 생성합니다.
+const createSequence = async () => {
+    let newId = 0;
+    try {
+        if (await Sequence.countDocuments()) {
+            const prevSequence = await Sequence.findOne({}).sort({ _id: -1 });
+            newId = prevSequence.id + 1;
+        }
+        const newSequence = new Sequence({
+            id: newId,
+            created_at: Date.now(),
+            processing: true,
+        });
+        newSequence.save();
+        return newSequence;
+    } catch (err) {
+        console.log(err);
+    }
+}
+
+export const crawl = async () => {
+    const sequence = await createSequence();
+    // puppeteer 시동
+    const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
+
     await page.goto(
         'https://search.shopping.naver.com/detail/detail.nhn?nvMid=20793817845',
     );
@@ -22,10 +61,21 @@ const pages = [
         height: 1080,
     });
     // 모델 페이지 크롤링
-    const checkList = await crawlModelPage(page);
-    // 상품 페이지 크롤링
-    for (var object of checkList) {
-        console.log(object.title);
-        await crawlProductPage(page, object.title);
+    const titles = await crawlModelPage(page);
+    // 상품페이지
+    const checkedUrls = [];
+    const checkDuplication = {};
+    // 모델페이지 크롤링데이터 별 상품페이지 크롤링
+    for (var title of titles) {
+        console.log(title);
+        await crawlProductPage(page, title, sequence, checkedUrls, checkDuplication);
     }
-})();
+    // 
+    // 검색어별 상품페이지 크롤링
+    for (var term of terms) {
+        console.log(term);
+        await crawlProductPage(page, term, sequence, checkedUrls, checkDuplication);
+    }
+    await Sequence.updateOne({ id: sequence.id }, { processing: false });
+    console.log('everyjob is done!');
+};

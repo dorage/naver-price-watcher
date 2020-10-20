@@ -2,6 +2,7 @@ import puppeteer from 'puppeteer';
 import Sequence from '../models/Sequence';
 import Product from '../models/Product';
 import Seller from '../models/Seller';
+import { crawl } from '../crawlers/init';
 
 export const getHome = (req, res) => {
     res.send('Welcome! naver-price-watcher!');
@@ -31,3 +32,8 @@ export const getLatest = async (req, res) => {
     }
     res.send(response);
 };
+
+export const postUpdate = (req, res) => {
+    crawl();
+    res.send('done! thanks!');
+}
