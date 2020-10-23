@@ -6,7 +6,6 @@ import swaggerUI from 'swagger-ui-express';
 
 import './db';
 import mainRouter from './routers/mainRouter';
-import './configs/crawler';
 import { dotenvConfigs } from './configs/dotenv';
 import { swaggerSpec } from './configs/swagger';
 import morgan from 'morgan';

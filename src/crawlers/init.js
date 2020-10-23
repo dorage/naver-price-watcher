@@ -15,6 +15,7 @@ const pages = [
     'https://search.shopping.naver.com/detail/detail.nhn?nvMid=15321359098&query=%EA%B7%80%EB%9A%9C%EB%9D%BC%EB%AF%B8%20%EC%98%A8%EC%88%98%EB%A7%A4%ED%8A%B8&NaPm=ct%3Dkgfb0iqo%7Cci%3D9601a294253a72cd0c01b84d8f89b05cad2cd844%7Ctr%3Dslsl%7Csn%3D95694%7Chk%3D00c8c261e9b2171afe47dd2783fd63bd1233aa9d',
 ];
 // 검색어
+/*
 const terms = [
     'krm-653',
     'krm-652',
@@ -26,6 +27,8 @@ const terms = [
     'em-322',
     'em-321',
 ];
+*/
+const terms = ['귀뚜라미 온수매트']
 
 // 새로운 sequence를 생성합니다.
 const createSequence = async () => {
@@ -46,36 +49,38 @@ const createSequence = async () => {
         console.log(err);
     }
 }
-
-export const crawl = async () => {
-    const sequence = await createSequence();
+const initPuppeteer = async () => { 
     // puppeteer 시동
     const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
-
-    await page.goto(
-        'https://search.shopping.naver.com/detail/detail.nhn?nvMid=20793817845',
-    );
     await page.setViewport({
         width: 1920,
         height: 1080,
     });
-    // 모델 페이지 크롤링
-    const titles = await crawlModelPage(page);
-    // 상품페이지
-    const checkedUrls = [];
-    const checkDuplication = {};
-    // 모델페이지 크롤링데이터 별 상품페이지 크롤링
-    for (var title of titles) {
-        console.log(title);
-        await crawlProductPage(page, title, sequence, checkDuplication);
+    return page;
+};
+
+export const crawl = async () => {
+    const sequence = await createSequence();
+    try {
+        // puppeteer 초기화
+        const page = await initPuppeteer();
+        // 모델 페이지 크롤링
+        const titles = await crawlModelPage(page);
+        // 상품페이지
+        const checkDuplication = {};
+        const searchTargets = [titles, terms];
+        for (var searchTarget of searchTargets) {
+            for (var searchTerm of searchTarget) {
+                console.log(title);
+                await crawlProductPage(page, searchTerm, sequence, checkDuplication);
+            }
+        }
+        // 시퀸스 완료 업데이트
+        await Sequence.updateOne({ id: sequence.id }, { processing: false });
+        console.log('everyjob is done!');
+    } catch (err) {
+        console.log(err);
+        await Sequence.deleteOne({id:sequence.id});
     }
-    // 
-    // 검색어별 상품페이지 크롤링
-    for (var term of terms) {
-        console.log(term);
-        await crawlProductPage(page, term, sequence, checkDuplication);
-    }
-    await Sequence.updateOne({ id: sequence.id }, { processing: false });
-    console.log('everyjob is done!');
 };
