@@ -1,9 +1,9 @@
-// 회사명
+// 검색어
 
 import mongoose from 'mongoose';
 
 const schema = new mongoose.Schema({
-    name: String,
+    term: String,
 });
 
 const model = mongoose.model('Vendor', schema);

@@ -10,11 +10,8 @@ import './configs/crawler';
 import { dotenvConfigs } from './configs/dotenv';
 import { swaggerSpec } from './configs/swagger';
 import morgan from 'morgan';
-import {
-    initializeProduct,
-    initializeSellers,
-    initializeVendors,
-} from './middlewares/initializeMiddleware';
+
+import crawling from './crawlers/init';
 
 const app = express();
 
@@ -29,11 +26,6 @@ app.use(
     }),
 );
 app.use(morgan('dev'));
-
-/// initialize Models // TODO; API로 등록하게 옮기기
-//initializeVendors();
-//initializeSellers();
-initializeProduct();
 
 app.use(mainRouter);
 app.use(
