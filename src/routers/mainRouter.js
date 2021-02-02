@@ -5,6 +5,6 @@ const router = new Router();
 
 router.get('/', getHome);
 
-router.get('/lastweek');
+router.get('/get');
 
 export default router;

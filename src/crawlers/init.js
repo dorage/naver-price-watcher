@@ -1,4 +1,9 @@
 import puppeteer from 'puppeteer';
+import Product from '../models/Product';
+
+//TODO; 프로덕트 모델에 검사시점을 DATE필드 추가
+//TODO; 프론트페이지 만들기
+//TODO; 요청가능한 REST API만들기
 
 /**
  * 모든 태그의 텍스트를 합쳐서 하나의 텍스트로 반환
@@ -13,19 +18,68 @@ const everyText = (parent) => {
 };
 
 export const crawling = async () => {
-    const keyword = '바른엔젤체어2';
-
     const browser = await puppeteer.launch({ headless: false });
     const page = await browser.newPage();
-    await page.goto(
-        `https://search.shopping.naver.com/search/all?query=${encodeURI(
-            `${keyword}`,
-        )}`,
-    );
-    await autoScroll(page);
+    await crawlProducts(page, '바른엔젤체어2');
+};
 
-    // 제목 / 가격 / 판매처 / 썸네일 사진 획득
-    // 완료
+/**
+ * 바닥까지 내려가는 무한 스크롤
+ */
+async function autoScroll(page) {
+    let [scrollY, pageY] = await page.evaluate(() => [
+        window.scrollY,
+        document.body.scrollHeight,
+    ]);
+    const innerHeight = await page.evaluate(() => window.innerHeight);
+    while (scrollY + innerHeight < pageY) {
+        [scrollY, pageY] = await page.evaluate(() => [
+            window.scrollY,
+            document.body.scrollHeight,
+        ]);
+        await page.evaluate(() => {
+            window.scrollBy(0, 300);
+        });
+        await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+}
+
+/**
+ * 인덱싱하며 네이버 쇼핑을 크롤링
+ * @param {*} page
+ */
+async function crawlProducts(page, term) {
+    let pagingIndex = 1;
+    const termQuery = `query=${encodeURI(term)}`;
+    const indexQuery = `pagingIndex=${pagingIndex}`;
+    const sortQuery = `sort=price_asc`;
+
+    while (true) {
+        console.log('while');
+        await page.goto(
+            `https://search.shopping.naver.com/search/all?${termQuery}&${indexQuery}&${sortQuery}`,
+        );
+        // 바닥까지 스크롤링해서 모든 상품 불러오기
+        await autoScroll(page);
+        // 상품코드들을 묶는 코드목록 ul 엘레멘트가 없다면
+        // 해당 페이지는 상품이 더 이상 없음을 의미
+        const ul = await page.evaluateHandle(() => {
+            return document.getElementsByClassName('list_basis');
+        });
+        if (!ul) break;
+        // 데이터 크롤링
+        await getDatas(page);
+        // 다음 페이지
+        pagingIndex++;
+    }
+    console.log('done');
+}
+
+/**
+ * 제목 / 가격 / 판매처 / 썸네일url / 링크url 을 반환
+ * @param {*} page
+ */
+async function getDatas(page) {
     const datas = await page.evaluate(() => {
         /**
          * className이 포함된 태그를 찾습니다.
@@ -53,22 +107,29 @@ export const crawling = async () => {
                 '#__next > div > div > div > div > div > ul > div > div > li',
             ),
         );
-        // function이 argument로 넘어가지 않는 문제
-        //return getElementIncludeClass;
         // a tags list
         const datas = liTags.map((li) => {
             const data = {
                 title: getElementIncludeClass(li, 'basicList_link').text,
-                price: getElementIncludeClass(li, 'price_num').text,
+                price: 0,
                 mallUrl: getElementIncludeClass(li, 'basicList_link').href,
                 imgUrl: '',
                 mall: '',
             };
+            // 가격
+            const priceTxt = getElementIncludeClass(li, 'price_num__')
+                .textContent;
+            data.price = Number(
+                priceTxt
+                    .split('')
+                    .filter((char) => !isNaN(char))
+                    .reduce((a, b) => a + b, ''),
+            );
             // 이미지 src
             data.imgUrl = getElementIncludeClass(
                 li,
-                'thumbnail',
-            ).getElementsByTagName('img')[0].src;
+                'thumbnail_thumb__',
+            ).children[0].src;
             // 쇼핑몰 정보
             const mallInfo = getElementIncludeClass(li, 'basicList_mall__');
             if (mallInfo.text) {
@@ -85,23 +146,18 @@ export const crawling = async () => {
         });
         return datas;
     });
-    console.log(datas);
-};
-
-async function autoScroll(page) {
-    let [scrollY, pageY] = await page.evaluate(() => [
-        window.scrollY,
-        document.body.scrollHeight,
-    ]);
-    const innerHeight = await page.evaluate(() => window.innerHeight);
-    while (scrollY + innerHeight < pageY) {
-        [scrollY, pageY] = await page.evaluate(() => [
-            window.scrollY,
-            document.body.scrollHeight,
-        ]);
-        await page.evaluate(() => {
-            window.scrollBy(0, 300);
+    try {
+        datas.forEach(({ title, price, mallUrl, imgUrl, mall }) => {
+            const product = new Product({
+                title,
+                price,
+                mall_url: mallUrl,
+                img_url: imgUrl,
+                mall,
+            });
+            product.save();
         });
-        await new Promise((resolve) => setTimeout(resolve, 50));
+    } catch (e) {
+        console.log(e);
     }
 }

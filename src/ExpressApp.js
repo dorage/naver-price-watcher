@@ -6,12 +6,11 @@ import swaggerUI from 'swagger-ui-express';
 
 import './db';
 import mainRouter from './routers/mainRouter';
+import productRouter from './routers/productRouter';
 import './configs/crawler';
 import { dotenvConfigs } from './configs/dotenv';
 import { swaggerSpec } from './configs/swagger';
 import morgan from 'morgan';
-
-import crawling from './crawlers/init';
 
 const app = express();
 
@@ -28,6 +27,7 @@ app.use(
 app.use(morgan('dev'));
 
 app.use(mainRouter);
+app.use('/products', productRouter);
 app.use(
     '/api-docs',
     swaggerUI.serve,

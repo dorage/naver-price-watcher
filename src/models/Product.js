@@ -9,15 +9,11 @@
 import mongoose from 'mongoose';
 
 const schema = new mongoose.Schema({
-    mallName: String,
-    name: String,
-    inner_id: String,
-    regular_price: Number,
-    outer_price: Number,
-    inner_price: Number,
-    thumbnail: String,
-    url: String,
-    info: String, // 개인에 따라 할 수 있으니 유저정보에 들어가야할 것 같다.
+    title: String,
+    price: Number,
+    mall_url: String,
+    img_url: String,
+    mall: String,
 });
 
 const model = mongoose.model('Product', schema);
