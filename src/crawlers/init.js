@@ -2,6 +2,7 @@ import schedule from 'node-schedule';
 import puppeteer from 'puppeteer';
 import Product from '../models/Product';
 
+//TODO; 날짜 생성하고 날짜기준으로 정렬
 //TODO; 프로덕트 모델에 검사시점을 DATE필드 추가
 //TODO; 프론트페이지 만들기
 //TODO; 요청가능한 REST API만들기
@@ -52,28 +53,66 @@ async function autoScroll(page) {
 async function crawlProducts(page, term) {
     let pagingIndex = 1;
     const termQuery = `query=${encodeURI(term)}`;
-    const indexQuery = `pagingIndex=${pagingIndex}`;
+    const indexQuery = `pagingIndex`;
     const sortQuery = `sort=price_asc`;
 
     while (true) {
-        console.log('while');
         await page.goto(
-            `https://search.shopping.naver.com/search/all?${termQuery}&${indexQuery}&${sortQuery}`,
+            `https://search.shopping.naver.com/search/all?${termQuery}&${indexQuery}=${pagingIndex}&${sortQuery}`,
         );
+        // 추천 낮은 가격순이 있으면 해당기능 끄기
+        await turnOffRecommendation(page);
         // 바닥까지 스크롤링해서 모든 상품 불러오기
         await autoScroll(page);
         // 상품코드들을 묶는 코드목록 ul 엘레멘트가 없다면
         // 해당 페이지는 상품이 더 이상 없음을 의미
         const ul = await page.evaluateHandle(() => {
-            return document.getElementsByClassName('list_basis');
+            return (
+                document.getElementsByClassName('list_basis')[0] !== undefined
+            );
         });
-        if (!ul) break;
+        if (!ul._remoteObject.value) break;
         // 데이터 크롤링
         await getDatas(page);
         // 다음 페이지
         pagingIndex++;
     }
     console.log('done');
+}
+
+/**
+ *
+ * @param {*} page
+ */
+async function turnOffRecommendation(page) {
+    await page.evaluate(() => {
+        /**
+         * className이 포함된 태그를 찾습니다.
+         * @param {*} parent 취상위 부모 태그 엘리멘트
+         * @param {*} className 찾을 className의 일부를 받습니다.
+         */
+        const getElementIncludeClass = (parent, className) => {
+            if (parent.className.includes(className)) {
+                return parent;
+            }
+            if (!parent.children.length) return null;
+            for (let i = 0; i < parent.children.length; i++) {
+                const element = getElementIncludeClass(
+                    parent.children[i],
+                    className,
+                );
+                if (element != null) {
+                    return element;
+                }
+            }
+        };
+        const radio = getElementIncludeClass(
+            document.body,
+            'subFilter_btn_radio__',
+        );
+        if (!radio || radio.text === 'OFF') return;
+        radio.click();
+    });
 }
 
 /**
