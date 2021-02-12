@@ -6,7 +6,7 @@
 // Seller
 // ProductModel
 
-import mongoose from 'mongoose';
+import mongoose, { Mongoose } from 'mongoose';
 
 const schema = new mongoose.Schema({
     title: String,
@@ -14,6 +14,7 @@ const schema = new mongoose.Schema({
     mall_url: String,
     img_url: String,
     mall: String,
+    task: { type: mongoose.Schema.Types.ObjectId, ref: 'Task' },
 });
 
 const model = mongoose.model('Product', schema);

@@ -1,28 +1,28 @@
 import schedule from 'node-schedule';
 import puppeteer from 'puppeteer';
 import Product from '../models/Product';
+import Task from '../models/Task';
+import { TaskProgress } from '../var';
 
-//TODO; 날짜 생성하고 날짜기준으로 정렬
-//TODO; 프로덕트 모델에 검사시점을 DATE필드 추가
-//TODO; 프론트페이지 만들기
-//TODO; 요청가능한 REST API만들기
+//TODO; 배포하기
+//TODO; [크롤링] 각 쇼핑몰별 상품코드를 받아오기
+//TODO; [크롤링] 상품코드별로 가격추이가 가능하게 모델 구조 변경하기 (동일 코드에 모든 정보가 묶이도록)
+//TODO; [프론트] 상품명 추가하는 기능만들기 (마지막)
 
-/**
- * 모든 태그의 텍스트를 합쳐서 하나의 텍스트로 반환
- * @param {*} tag 최상위 부모 태그 엘리멘트
- */
-const everyText = (parent) => {
-    let currText = `${parent.text}`;
-    Array.from(parent.children).forEach((tag) => {
-        currText += everyText(tag);
-    });
-    return currText;
-};
-
-export const crawling = async () => {
+export const crawling = async (task, term) => {
     const browser = await puppeteer.launch({ headless: false });
     const page = await browser.newPage();
-    await crawlProducts(page, '바른엔젤체어2');
+    try {
+        await crawlProducts(page, task, term);
+        task.progress = TaskProgress.done;
+        await task.save();
+    } catch (err) {
+        console.log(err);
+        task.progress = TaskProgress.error;
+        await task.save();
+    }
+    await page.close();
+    await browser.close();
 };
 
 /**
@@ -42,7 +42,7 @@ async function autoScroll(page) {
         await page.evaluate(() => {
             window.scrollBy(0, 300);
         });
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 100));
     }
 }
 
@@ -50,12 +50,11 @@ async function autoScroll(page) {
  * 인덱싱하며 네이버 쇼핑을 크롤링
  * @param {*} page
  */
-async function crawlProducts(page, term) {
+async function crawlProducts(page, task, term) {
     let pagingIndex = 1;
     const termQuery = `query=${encodeURI(term)}`;
     const indexQuery = `pagingIndex`;
     const sortQuery = `sort=price_asc`;
-
     while (true) {
         await page.goto(
             `https://search.shopping.naver.com/search/all?${termQuery}&${indexQuery}=${pagingIndex}&${sortQuery}`,
@@ -72,8 +71,8 @@ async function crawlProducts(page, term) {
             );
         });
         if (!ul._remoteObject.value) break;
-        // 데이터 크롤링
-        await getDatas(page);
+        // 현재 페이지 크롤링
+        await getDatas(page, task);
         // 다음 페이지
         pagingIndex++;
     }
@@ -81,7 +80,7 @@ async function crawlProducts(page, term) {
 }
 
 /**
- *
+ * 추천 낮은 가격순 기능을 끕니다.
  * @param {*} page
  */
 async function turnOffRecommendation(page) {
@@ -119,7 +118,7 @@ async function turnOffRecommendation(page) {
  * 제목 / 가격 / 판매처 / 썸네일url / 링크url 을 반환
  * @param {*} page
  */
-async function getDatas(page) {
+async function getDatas(page, task) {
     const datas = await page.evaluate(() => {
         /**
          * className이 포함된 태그를 찾습니다.
@@ -166,10 +165,7 @@ async function getDatas(page) {
                     .reduce((a, b) => a + b, ''),
             );
             // 이미지 src
-            data.imgUrl = getElementIncludeClass(
-                li,
-                'thumbnail_thumb__',
-            ).children[0].src;
+            data.imgUrl = li.getElementsByTagName('img')[0].src;
             // 쇼핑몰 정보
             const mallInfo = getElementIncludeClass(li, 'basicList_mall__');
             if (mallInfo.text) {
@@ -194,6 +190,7 @@ async function getDatas(page) {
                 mall_url: mallUrl,
                 img_url: imgUrl,
                 mall,
+                task,
             });
             product.save();
         });
