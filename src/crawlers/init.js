@@ -3,6 +3,7 @@ import puppeteer from 'puppeteer';
 import Product from '../models/Product';
 import Task from '../models/Task';
 import { TaskProgress } from '../var';
+import { get11stPdtCode } from './mallController';
 
 //TODO; 배포하기
 //TODO; [크롤링] 각 쇼핑몰별 상품코드를 받아오기
@@ -46,6 +47,31 @@ async function autoScroll(page) {
     }
 }
 
+export async function getRedirectURL() {
+    const browser = await puppeteer.launch({ headless: false });
+    const page = await browser.newPage();
+    /**
+     * 다음 시간만큼 대기합니다.
+     * @param {*} ms
+     */
+    const sleep = function (ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    };
+    try {
+        const product = await Product.findOne();
+        await page.goto(`${product.mall_url}`);
+        while (page.url().includes('naver')) {
+            await sleep(500);
+        }
+        console.log(get11stPdtCode(page.url()));
+        console.log(page.url());
+    } catch (err) {
+        console.log(err);
+    }
+    await page.close();
+    await browser.close();
+}
+
 /**
  * 인덱싱하며 네이버 쇼핑을 크롤링
  * @param {*} page
@@ -71,8 +97,11 @@ async function crawlProducts(page, task, term) {
             );
         });
         if (!ul._remoteObject.value) break;
-        // 현재 페이지 크롤링
-        await getDatas(page, task);
+        {
+            // 현재 페이지 크롤링
+            const datas = await getDatas(page, task);
+            await makeModel(datas);
+        }
         // 다음 페이지
         pagingIndex++;
     }
@@ -111,6 +140,24 @@ async function turnOffRecommendation(page) {
         );
         if (!radio || radio.text === 'OFF') return;
         radio.click();
+    });
+}
+
+/**
+ * 크롤링한 데이터를 DB에 저장합니다.
+ * @param {*} datas
+ */
+async function makeModel(datas) {
+    datas.forEach(({ title, price, mallUrl, imgUrl, mall }) => {
+        const product = new Product({
+            title,
+            price,
+            mall_url: mallUrl,
+            img_url: imgUrl,
+            mall,
+            task,
+        });
+        product.save();
     });
 }
 
@@ -182,19 +229,5 @@ async function getDatas(page, task) {
         });
         return datas;
     });
-    try {
-        datas.forEach(({ title, price, mallUrl, imgUrl, mall }) => {
-            const product = new Product({
-                title,
-                price,
-                mall_url: mallUrl,
-                img_url: imgUrl,
-                mall,
-                task,
-            });
-            product.save();
-        });
-    } catch (e) {
-        console.log(e);
-    }
+    return datas;
 }
