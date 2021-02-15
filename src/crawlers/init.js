@@ -3,7 +3,7 @@ import puppeteer from 'puppeteer';
 import Product from '../models/Product';
 import Task from '../models/Task';
 import { TaskProgress } from '../var';
-import { get11stPdtCode } from './mallController';
+import { get11stPdtCode } from './mallActions';
 
 //TODO; 배포하기
 //TODO; [크롤링] 각 쇼핑몰별 상품코드를 받아오기
