@@ -237,3 +237,15 @@ export const getHmallPdtCode = function (url) {
     const { slitmCd: pdtCode } = destructQueries(url);
     return pdtCode;
 };
+/**
+ * 티몬 상품번호
+ * @param {*} url
+ */
+export const getTMonPdtCode = function (url) {
+    // url/"pdtCode"?queries
+    url = url.split('?').shift();
+    url = url.split('/');
+    url.reverse();
+    const pdtCode = url.shift();
+    return pdtCode;
+};
