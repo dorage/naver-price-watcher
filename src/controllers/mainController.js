@@ -5,7 +5,4 @@ export const getHome = async (req, res) => {
 
 export const getTest = async (req, res) => {
     res.send('TESTING API!!');
-    const products = await Product.find();
-    const set = new Set(products.map((elem) => elem.mall));
-    [...set].forEach((elem) => console.log(elem));
 };

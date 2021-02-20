@@ -1,4 +1,7 @@
+import Price from '../models/Price';
+import Product from '../models/Product';
 import { getProductCode } from './mallCrawler';
+import { autoScroll } from './utils';
 
 /**
  * 인덱싱하며 네이버 쇼핑을 크롤링
@@ -28,7 +31,7 @@ export async function crawlProducts(page, task, term) {
         {
             // 현재 페이지 크롤링
             const datas = await getDatas(page, task);
-            await makeModel(page, datas);
+            await makeModel(page, task, datas);
         }
         // 다음 페이지
         pagingIndex++;
@@ -38,15 +41,33 @@ export async function crawlProducts(page, task, term) {
 
 /**
  * 크롤링한 데이터를 DB에 저장합니다.
+ * @param {*} page
+ * @param {*} task
  * @param {*} datas
  */
-async function makeModel(page, datas) {
-    for (const [title, price, mallUrl, imgUrl, mall] of datas) {
+async function makeModel(page, task, datas) {
+    // TODO; 작업중
+    for (const { title, price, mallUrl, imgUrl, mall } of datas) {
         // 몰 접속해서 상품코드 받아오기
         const productId = await getProductCode(page, mall, mallUrl);
         // 이미 등록된 상품인지 확인하고 등록되지 않았으면 생성하기
-        // 이미 등록된 상품이면 새로운 가격 모델만 생성하고 저장
-        // 카탈로그 는 기본적으로 추적을 꺼버리기
+        let product = await Product.findOne({ product_id: productId });
+        if (!product) {
+            product = new Product({
+                title,
+                mall_url: mallUrl,
+                product_id: productId,
+                img_url: imgUrl,
+                mall,
+                memo: '',
+                // 카탈로그 는 기본적으로 추적을 꺼버리기
+                onTracking: mall !== '카탈로그',
+            });
+            await product.save();
+        }
+        // 새로운 가격 모델만 생성 후 저장
+        const priceModel = new Price({ product, task, price });
+        await priceModel.save();
     }
 }
 

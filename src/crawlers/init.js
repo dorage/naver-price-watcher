@@ -11,7 +11,7 @@ import { crawlProducts } from './shoppingCrawler';
 //TODO; [프론트] 상품명 추가하는 기능만들기 (마지막)
 
 export const crawling = async (task, term) => {
-    const browser = await puppeteer.launch({ headless: false });
+    const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
     try {
         await crawlProducts(page, task, term);

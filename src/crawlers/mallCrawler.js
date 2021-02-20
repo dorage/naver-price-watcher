@@ -39,14 +39,15 @@ export async function getProductCode(page, mall, mallUrl) {
     // 페이지가 리다이렉트될때까지 대기합니다.
     try {
         await page.goto(mallUrl);
-        while (page.url().includes('cr.shopping.naver.com')) {
+        while (page.url().includes('https://cr.shopping.naver.com')) {
             await sleep(100);
         }
+        const pdtCode = await getProductCodeFromMall(mall, page.url());
+        return pdtCode;
     } catch (err) {
         console.log(err);
+        return null;
     }
-    const pdtCode = await getProductCodeFromMall(mall, page.url());
-    return pdtCode;
 }
 
 async function getProductCodeFromMall(mall, mallUrl) {

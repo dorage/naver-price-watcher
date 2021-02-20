@@ -26,12 +26,9 @@ const destructQueries = function (url) {
  * @param {*} url
  */
 export const get11stPdtCode = function (url) {
-    // url/products/"pdtCode"?queries
-    // query 제거한 부분만 추출
-    url = url.split('?').shift();
-    url = url.split('/');
-    url.reverse();
-    return url.shift();
+    // prdNo query
+    const { prdNo: pdtCode } = destructQueries(url);
+    return pdtCode;
 };
 /**
  * 옥션 상품번호
