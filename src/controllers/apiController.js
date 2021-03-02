@@ -2,7 +2,9 @@ import { crawling } from '../crawlers/init';
 import Term from '../models/Term';
 import Task from '../models/Task';
 import Product from '../models/Product';
+import Price from '../models/Price';
 import { TaskProgress } from '../var';
+import { product } from 'puppeteer';
 
 export const getTerms = async (req, res) => {
     try {
@@ -13,6 +15,7 @@ export const getTerms = async (req, res) => {
         res.send(err);
     }
 };
+// TODO;
 export const postTerms = async (req, res) => {
     const {
         body: { term },
@@ -32,6 +35,7 @@ export const postTerms = async (req, res) => {
         res.send(err);
     }
 };
+// TODO;
 export const getTasks = async (req, res) => {
     const {
         query: { term: termQuery },
@@ -55,18 +59,61 @@ export const getTasks = async (req, res) => {
 };
 export const getDataWithTerm = async (req, res) => {
     const {
-        query: { term: termQuery, date: dateQuery },
+        query: { term: termQuery, created_at, page },
     } = req;
     try {
         const term = await Term.findOne({ term: termQuery });
-        const task = await Task.findOne({ term, created_at: dateQuery });
-        const data = await Product.find({ task });
-        res.send(data);
+        const task = await Task.findOne({
+            term,
+            created_at,
+            progress: TaskProgress.done,
+        });
+        const tasks = await Task.find({
+            term,
+            progress: TaskProgress.done,
+        }).limit(5);
+        const products = await Product.find({ task })
+            .limit(40)
+            .skip(!page ? 0 : page * 20);
+
+        const response = [];
+        for (const product of products) {
+            const prices = [];
+            for (const task of tasks) {
+                const price = await Price.findOne(
+                    { task, product },
+                    { _id: 0, price: 1 },
+                );
+                prices.push(price?.price || null);
+            }
+            const {
+                title,
+                mall_url,
+                product_id,
+                img_url,
+                mall,
+                memo,
+                onTracking,
+            } = product;
+            const obj = {
+                title,
+                mall_url,
+                product_id,
+                img_url,
+                mall,
+                memo,
+                onTracking,
+                prices,
+            };
+            response.push(obj);
+        }
+        res.send(response);
     } catch (err) {
         console.log(err);
         res.send(err);
     }
 };
+// TODO;
 export const postCrawlWithTerm = async (req, res) => {
     const {
         query: { term: termQuery },

@@ -9,6 +9,7 @@
 import mongoose, { Mongoose } from 'mongoose';
 
 const schema = new mongoose.Schema({
+    task: { type: mongoose.Schema.Types.ObjectId, ref: 'Task' },
     title: String,
     mall_url: String,
     product_id: String,

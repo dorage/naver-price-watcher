@@ -15,6 +15,8 @@ router.post('/term', postTerms);
 router.get('/task', getTasks);
 router.get('/crawl', getDataWithTerm);
 router.post('/crawl', postCrawlWithTerm);
+router.get('/:id/memo', postCrawlWithTerm);
+router.post('/:id/memo', postCrawlWithTerm);
 
 router.get('/date', getDate);
 

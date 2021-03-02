@@ -31,12 +31,14 @@ export async function crawlProducts(page, task, term) {
         {
             // 현재 페이지 크롤링
             const datas = await getDatas(page, task);
-            await makeModel(page, task, datas);
+            await saveOnDB(page, task, datas);
         }
-        // 다음 페이지
+        // 다음 페이지 / 30페이지까지만
         pagingIndex++;
+        if (pagingIndex > 5) {
+            break;
+        }
     }
-    console.log('done');
 }
 
 /**
@@ -45,15 +47,16 @@ export async function crawlProducts(page, task, term) {
  * @param {*} task
  * @param {*} datas
  */
-async function makeModel(page, task, datas) {
+async function saveOnDB(page, task, datas) {
     // TODO; 작업중
     for (const { title, price, mallUrl, imgUrl, mall } of datas) {
         // 몰 접속해서 상품코드 받아오기
         const productId = await getProductCode(page, mall, mallUrl);
         // 이미 등록된 상품인지 확인하고 등록되지 않았으면 생성하기
         let product = await Product.findOne({ product_id: productId });
-        if (!product) {
+        if (!product || mall === '카탈로그') {
             product = new Product({
+                task,
                 title,
                 mall_url: mallUrl,
                 product_id: productId,
